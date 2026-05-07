@@ -44,6 +44,7 @@ install_pair() {
 
 install_pair "wcd" "wcd: cd to ~/.worktrees/<repo>/<worktree>"
 install_pair "cwt" "cwt: open/resume a Claude worktree under ~/.worktrees/<repo>/"
+install_pair "cwt-rm" "cwt-rm: remove a Claude worktree under ~/.worktrees/<repo>/"
 
 if [[ "$did_install" -eq 0 ]]; then
     echo "no shell rc files found (~/.zshrc, ~/.bashrc, ~/.bash_profile)" >&2
