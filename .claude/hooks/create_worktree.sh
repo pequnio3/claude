@@ -41,6 +41,12 @@ fi
 
 git -C "$PROJECT_DIR" worktree add -b "worktree-$NAME" "$TARGET_DIR" origin/main
 
+# If the worktree has no .claude (because it's gitignored in this repo), symlink
+# the source repo's .claude so the worktree Claude picks up the same config.
+if [ ! -e "$TARGET_DIR/.claude" ] && [ -d "$PROJECT_DIR/.claude" ]; then
+    ln -s "$PROJECT_DIR/.claude" "$TARGET_DIR/.claude"
+fi
+
 # Return the path to Claude so it knows where to start the session
 
 # Check for a 'setup.sh' in the newly created worktree
