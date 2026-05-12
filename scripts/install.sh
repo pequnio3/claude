@@ -7,15 +7,37 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 install_into() {
     local rc="$1" file="$2" label="$3" comment="$4"
-    if grep -Fq "$file" "$rc" 2>/dev/null; then
-        echo "$label: already installed in $rc"
-        return 0
+    local replaced=0
+    if grep -Fq "source \"$file\"" "$rc" 2>/dev/null; then
+        local tmp
+        tmp="$(mktemp)"
+        awk -v target="source \"$file\"" '
+            { lines[NR] = $0 }
+            END {
+                for (i = 1; i <= NR; i++) {
+                    if (lines[i] == target) {
+                        drop[i] = 1
+                        if (i > 1 && substr(lines[i-1], 1, 1) == "#") {
+                            drop[i-1] = 1
+                            if (i > 2 && lines[i-2] == "") drop[i-2] = 1
+                        }
+                    }
+                }
+                for (i = 1; i <= NR; i++) if (!drop[i]) print lines[i]
+            }
+        ' "$rc" > "$tmp"
+        mv "$tmp" "$rc"
+        replaced=1
     fi
     {
         printf '\n# %s\n' "$comment"
         printf 'source "%s"\n' "$file"
     } >> "$rc"
-    echo "$label: installed in $rc"
+    if [[ $replaced -eq 1 ]]; then
+        echo "$label: reinstalled in $rc"
+    else
+        echo "$label: installed in $rc"
+    fi
 }
 
 bash_rc=""
