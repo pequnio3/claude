@@ -68,6 +68,39 @@ install_pair "wcd" "wcd: cd to ~/.worktrees/<repo>/<worktree>"
 install_pair "cwt" "cwt: open/resume a Claude worktree under ~/.worktrees/<repo>/"
 install_pair "cwt-rm" "cwt-rm: remove a Claude worktree under ~/.worktrees/<repo>/"
 
+# Deploy the WorktreeCreate hook + settings from this repo into ~/.claude so the
+# repo stays the source of truth. The hook is symlinked so future repo edits take
+# effect immediately (no manual re-copy / staleness). settings.json is only
+# installed when absent — never overwrite an existing config, which may have more
+# than this repo's template (plugins, env, push-notif prefs, etc.).
+deploy_claude() {
+    local repo_claude="$SCRIPT_DIR/../.claude"
+    local hook_src="$repo_claude/hooks/create_worktree.sh"
+    local hook_dst="$HOME/.claude/hooks/create_worktree.sh"
+    local settings_src="$repo_claude/settings.json"
+    local settings_dst="$HOME/.claude/settings.json"
+
+    if [[ -f "$hook_src" ]]; then
+        mkdir -p "$(dirname "$hook_dst")"
+        ln -sfn "$hook_src" "$hook_dst"
+        echo "create_worktree.sh: symlinked into ~/.claude/hooks"
+        did_install=1
+    fi
+
+    if [[ -f "$settings_src" ]]; then
+        if [[ -e "$settings_dst" ]]; then
+            echo "settings.json: left existing ~/.claude/settings.json untouched"
+        else
+            mkdir -p "$(dirname "$settings_dst")"
+            cp "$settings_src" "$settings_dst"
+            echo "settings.json: installed in ~/.claude (was missing)"
+        fi
+        did_install=1
+    fi
+}
+
+deploy_claude
+
 if [[ "$did_install" -eq 0 ]]; then
     echo "no shell rc files found (~/.zshrc, ~/.bashrc, ~/.bash_profile)" >&2
     echo "create one of those, or source the scripts manually." >&2

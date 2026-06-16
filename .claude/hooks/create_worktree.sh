@@ -41,10 +41,27 @@ fi
 
 git -C "$PROJECT_DIR" worktree add -b "worktree-$NAME" "$TARGET_DIR" origin/main
 
-# If the worktree has no .claude (because it's gitignored in this repo), symlink
-# the source repo's .claude so the worktree Claude picks up the same config.
-if [ ! -e "$TARGET_DIR/.claude" ] && [ -d "$PROJECT_DIR/.claude" ]; then
-    ln -s "$PROJECT_DIR/.claude" "$TARGET_DIR/.claude"
+# The worktree is checked out from origin/main, so anything gitignored in the
+# source repo (e.g. .claude) is absent. Copy over the paths listed in the repo's
+# .worktreeinclude file so they're present in the new worktree. Patterns are
+# plain paths relative to the repo root, one per line; blank lines and # comments
+# are ignored. Copies (cp -a) rather than symlinks so each worktree is isolated.
+INCLUDE_FILE="$PROJECT_DIR/.worktreeinclude"
+if [ -f "$INCLUDE_FILE" ]; then
+    echo "Applying .worktreeinclude..."
+    while IFS= read -r pattern || [ -n "$pattern" ]; do
+        pattern="$(printf '%s' "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        case "$pattern" in ''|\#*) continue ;; esac
+        src="$PROJECT_DIR/$pattern"
+        dest="$TARGET_DIR/$pattern"
+        if [ -e "$src" ]; then
+            mkdir -p "$(dirname "$dest")"
+            cp -a "$src" "$dest"
+            echo "  copied: $pattern"
+        else
+            echo "  skipped (not found in source repo): $pattern"
+        fi
+    done < "$INCLUDE_FILE"
 fi
 
 # Return the path to Claude so it knows where to start the session

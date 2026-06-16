@@ -1,0 +1,5 @@
+# machine-local Claude settings (per-host paths, permissions)
+.claude/settings.local.json
+
+# editor / backup cruft
+*~

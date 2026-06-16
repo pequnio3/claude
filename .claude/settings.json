@@ -1,14 +1,22 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "hooks": {
     "WorktreeCreate": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/hooks/create_worktree.sh"
+            "command": "bash ~/.claude/hooks/create_worktree.sh",
+            "timeout": 20
           }
         ]
       }
     ]
-  }
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
+  },
+  "agentPushNotifEnabled": true
 }
