@@ -39,7 +39,7 @@ if git -C "$PROJECT_DIR" rev-parse --verify --quiet main >/dev/null; then
     fi
 fi
 
-git -C "$PROJECT_DIR" worktree add -b "worktree-$NAME" "$TARGET_DIR" origin/main
+git -C "$PROJECT_DIR" worktree add -b "worktree-$NAME" "$TARGET_DIR" origin/main >&2
 
 # The worktree is checked out from origin/main, so anything gitignored in the
 # source repo (e.g. .claude) is absent. Copy over the paths listed in the repo's
@@ -48,7 +48,7 @@ git -C "$PROJECT_DIR" worktree add -b "worktree-$NAME" "$TARGET_DIR" origin/main
 # are ignored. Copies (cp -a) rather than symlinks so each worktree is isolated.
 INCLUDE_FILE="$PROJECT_DIR/.worktreeinclude"
 if [ -f "$INCLUDE_FILE" ]; then
-    echo "Applying .worktreeinclude..."
+    echo "Applying .worktreeinclude..." >&2
     while IFS= read -r pattern || [ -n "$pattern" ]; do
         pattern="$(printf '%s' "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
         case "$pattern" in ''|\#*) continue ;; esac
@@ -57,23 +57,24 @@ if [ -f "$INCLUDE_FILE" ]; then
         if [ -e "$src" ]; then
             mkdir -p "$(dirname "$dest")"
             cp -a "$src" "$dest"
-            echo "  copied: $pattern"
+            echo "  copied: $pattern" >&2
         else
-            echo "  skipped (not found in source repo): $pattern"
+            echo "  skipped (not found in source repo): $pattern" >&2
         fi
     done < "$INCLUDE_FILE"
 fi
 
-# Return the path to Claude so it knows where to start the session
-
-# Check for a 'setup.sh' in the newly created worktree
+# Check for a 'setup.sh' in the newly created worktree. Send its output to stderr
+# so it doesn't pollute stdout (Claude treats stdout as the worktree path).
 if [ -f "$TARGET_DIR/scripts/setup.sh" ]; then
-    echo "Running project setup..."
-    bash "$TARGET_DIR/scripts/setup.sh" "$TARGET_DIR"
+    echo "Running project setup..." >&2
+    bash "$TARGET_DIR/scripts/setup.sh" "$TARGET_DIR" >&2
 elif [ -f "$TARGET_DIR/setup.sh" ]; then
-    echo "Running project setup..."
-    bash "$TARGET_DIR/setup.sh" "$TARGET_DIR"
+    echo "Running project setup..." >&2
+    bash "$TARGET_DIR/setup.sh" "$TARGET_DIR" >&2
 fi
 
-# Return to Claude
-echo "{\"worktree_path\": \"$TARGET_DIR\"}"
+# Return the worktree path to Claude so it knows where to start the session.
+# A command-type WorktreeCreate hook must print ONLY the bare path on stdout —
+# not JSON, and with no other output mixed in.
+echo "$TARGET_DIR"
